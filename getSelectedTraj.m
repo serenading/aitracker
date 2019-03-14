@@ -1,15 +1,16 @@
 function [selectedTraj,wormIDs] = getSelectedTraj(genotype,tracker)
 
 % set parameters
-timeWindow = [30,60]; % in minutes
+timeWindow = [30, 35]; % start and end time in minutes
 frameRate = 9;
 
-% get frame numbers
-frames = timeWindow * frameRate;
+% get list of frames
+frames = timeWindow*60*frameRate;
 frames = frames(1):frames(2);
 
 % initialise
-selectedTraj = NaN(10000,3);
+numCols = 4;
+selectedTraj = NaN(100000,numCols);
 
 % get selectedTraj for the time window
 if strcmp(tracker,'AI')
@@ -21,14 +22,12 @@ if strcmp(tracker,'AI')
     output = readtable(filename);
     % get valid frame indices
     frameInd = [];
-    wormIDs = [];
     for frameCtr = 1:numel(frames)
         frame = frames(frameCtr);
         frameInd = vertcat(frameInd,find(output.t == frame)); % indices for all specified frames
-        wormIDs = vertcat(wormIDs, output.particle(frameInd)); % wormID's during all specified frames
     end
-    % get selected trajectories
-    wormIDs = unique(wormIDs);
+    % get trajectories for all worms during the specified window
+    wormIDs = unique(output.particle(frameInd));
     rowStartIdx = 1;
     for wormCtr = 1:numel(wormIDs)
         worm = wormIDs(wormCtr);
@@ -39,6 +38,7 @@ if strcmp(tracker,'AI')
         selectedTraj(rowStartIdx:rowEndIdx,1) = ones(numel(validRowInd),1)*worm;
         selectedTraj(rowStartIdx:rowEndIdx,2) = output.x(validRowInd);
         selectedTraj(rowStartIdx:rowEndIdx,3) = output.y(validRowInd);
+        selectedTraj(rowStartIdx:rowEndIdx,4) = output.t(validRowInd);
         rowStartIdx = rowEndIdx+1;
         if rowEndIdx > size(selectedTraj,1)
             warning('Not enough rows pre-allocated')
@@ -71,6 +71,7 @@ elseif strcmp(tracker,'TT')
         selectedTraj(rowStartIdx:rowEndIdx,1) = ones(numel(validRowInd),1)*double(worm);
         selectedTraj(rowStartIdx:rowEndIdx,2) = trajData.coord_y(validRowInd);
         selectedTraj(rowStartIdx:rowEndIdx,3) = trajData.coord_x(validRowInd);
+        selectedTraj(rowStartIdx:rowEndIdx,4) = trajData.frame_number(validRowInd);
         rowStartIdx = rowEndIdx+1;
         if rowEndIdx > size(selectedTraj,1)
             warning('Not enough rows pre-allocated')
@@ -78,6 +79,6 @@ elseif strcmp(tracker,'TT')
     end
 end
 
+% remove empty NaN's
 selectedTraj = selectedTraj(~isnan(selectedTraj));
-selectedTraj = reshape(selectedTraj,[numel(selectedTraj)/3,3]);
-
+selectedTraj = reshape(selectedTraj,[numel(selectedTraj)/numCols,numCols]);

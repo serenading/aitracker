@@ -3,7 +3,7 @@ close all
 
 trackers = {'AI','TT'};
 genotypes = {'npr1','N2'};
-featureName = 'selectedTraj'; % 'longestTracks' % 'trackLength' %'selectedTraj'
+featureName = 'trackLength'% 'selectedTraj'; %'longestTracks';%; %; %;
 featureFig = figure;
 loadResults = true; % select false during exploratory work to make new calculations
 saveResults = false;
@@ -17,9 +17,6 @@ exportOptions = struct('Format','eps2',...
     'FontSize',25,...
     'LineWidth',3);
 
-legends = strings(1,numel(trackers)*numel(genotypes));
-warning off MATLAB:legend:IgnoringExtraEntries
-
 % go through tracker type
 for trackerCtr = 1:length(trackers)
     tracker = trackers{trackerCtr};
@@ -27,38 +24,40 @@ for trackerCtr = 1:length(trackers)
     for genotypeCtr = 1:length(genotypes)
         genotype = genotypes{genotypeCtr};
         % check to see if feature has already been calculated and load
-        if loadResults & exist([genotype tracker featureName '.mat'])
-            load([genotype tracker featureName '.mat'],featureName,'wormIDs')
+        if loadResults
+            if exist([genotype tracker featureName '.mat'])
+                load([genotype tracker featureName '.mat'],featureName,'wormIDs')
+            end
         else % calculate results
             if strcmp(featureName,'trackLength')
                 % calculate track length
-                [trackLength,~] = getTrackLength(tracker,genotype);
+                [trackLength,wormIDs] = getTrackLength(tracker, genotype);
             elseif strcmp(featureName,'longestTracks')
                 % get xy coordinates for 10 longest tracks
-                [longestTracks,wormIDs] = getLongestTracks(genotype,tracker);
+                [longestTracks,wormIDs] = getLongestTracks(genotype, tracker);
             elseif strcmp(featureName,'selectedTraj') 
                 % get xy coordinates for trajectories during selected parts of the movie
-                [selectedTraj,wormIDs] = getSelectedTraj(genotype,tracker);
+                [selectedTraj,wormIDs] = getSelectedTraj(genotype, tracker);
             else
                 warning('feature does not exist')
             end
             % save
-            %if saveResults
+            if saveResults
                 savename = [genotype tracker featureName '.mat'];
                 save(savename,featureName,'wormIDs')
-            %end
+            end
         end
         % update file counter
-        fileCtr = (trackerCtr-1)*numel(genotypes)+genotypeCtr;
+        fileCtr = (genotypeCtr-1)*numel(genotype)+trackerCtr;
         % generate legend
-        legends(fileCtr) = [genotype tracker];
+        legends{fileCtr} = ['genotype' 'tracker']; 
         % plot
         if strcmp(featureName, 'trackLength')
-            plotTrackLength(trackLength,featureFig,legends);
+            plotTrackLength(trackLength,featureFig,trackers,genotypes,tracker,genotype,fileCtr);
         elseif strcmp(featureName,'longestTracks')
             plotLongestTracks(longestTracks,featureFig,trackers,genotypes,tracker,genotype,fileCtr,wormIDs);
         elseif strcmp(featureName,'selectedTraj')
-            plotSelectedTraj(selectedTraj,featureFig,trackers,genotypes,tracker,genotype,wormIDs);
+            plotSelectedTraj(selectedTraj,featureFig,trackers,genotypes,tracker,genotype,fileCtr,wormIDs);
         end
     end
 end
